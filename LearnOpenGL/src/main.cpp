@@ -2,6 +2,13 @@
 #include <GLFW/glfw3.h>
 #include <iostream>
 
+/*
+    图形管线graphics pipeline可以分为两大部分：
+        第一部分将三维坐标转换为二维坐标，(所有三维坐标转换为适合屏幕的二维像素)
+        第二部分将二维坐标转换为实际的彩色像素
+
+    图形管线graphics pipeline以一组三维坐标作为input，并将其转换为屏幕上的彩色二维像素
+*/
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
@@ -9,6 +16,13 @@ void processInput(GLFWwindow* window);
 // settings
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
+
+// 作为graphics pipeline的输入(顶点集合)
+float vertices[] = {
+     -0.5f, -0.5f, 0.0f,    // 这里z轴坐标为0.0f, 表示深度不变
+     0.5f, -0.5f, 0.0f,
+     0.0f,  0.5f, 0.0f
+};
 
 int main()
 {
@@ -18,7 +32,7 @@ int main()
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    // glfw window creation
+    // glfw window creation 屏幕或窗口是一个二维像素数组
     GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", NULL, NULL);
     if (window == NULL)
     {
