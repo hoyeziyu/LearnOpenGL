@@ -3,11 +3,11 @@
 #include <iostream>
 
 /*
-    图形管线graphics pipeline可以分为两大部分：
-        第一部分将三维坐标转换为二维坐标，(所有三维坐标转换为适合屏幕的二维像素)
-        第二部分将二维坐标转换为实际的彩色像素
+	图形管线graphics pipeline可以分为两大部分：
+		第一部分将三维坐标转换为二维坐标，(所有三维坐标转换为适合屏幕的二维像素)
+		第二部分将二维坐标转换为实际的彩色像素
 
-    图形管线graphics pipeline以一组三维坐标作为input，并将其转换为屏幕上的彩色二维像素
+	图形管线graphics pipeline以一组三维坐标作为input，并将其转换为屏幕上的彩色二维像素
 */
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -17,80 +17,168 @@ void processInput(GLFWwindow* window);
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
 
-// 作为graphics pipeline的输入(顶点集合)
-float vertices[] = {
-     -0.5f, -0.5f, 0.0f,    // 这里z轴坐标为0.0f, 表示深度不变
-     0.5f, -0.5f, 0.0f,
-     0.0f,  0.5f, 0.0f
-};
+const char* vertexShaderSource = "#version 330 core\n"
+								"layout (location = 0) in vec3 aPos;\n"
+								"void main()\n"
+								"{\n"
+								"   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
+								"}\0";
+
+const char* fragmentShaderSource = "#version 330 core\n"
+									"out vec4 FragColor;\n"
+									"void main()\n"
+									"{\n"
+									"   FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
+									"}\n\0";
 
 int main()
 {
-    // glfw: initialize and configure
-    glfwInit();
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+	// glfw: initialize and configure
+	glfwInit();
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    // glfw window creation 屏幕或窗口是一个二维像素数组
-    GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", NULL, NULL);
-    if (window == NULL)
-    {
-        std::cout << "Failed to create GLFW window" << std::endl;
-        glfwTerminate();
-        return -1;
-    }
-    glfwMakeContextCurrent(window);
-    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+	// glfw window creation 屏幕或窗口是一个二维像素数组
+	GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", NULL, NULL);
+	if (window == NULL)
+	{
+		std::cout << "Failed to create GLFW window" << std::endl;
+		glfwTerminate();
+		return -1;
+	}
+	glfwMakeContextCurrent(window);
+	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
-    // glad: load all OpenGL function pointers（GLAD 管理 OpenGL 的函数指针）
-    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
-    {
-        std::cout << "Failed to initialize GLAD" << std::endl;
-        return -1;
-    }
+	// glad: load all OpenGL function pointers（GLAD 管理 OpenGL 的函数指针）
+	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
+	{
+		std::cout << "Failed to initialize GLAD" << std::endl;
+		return -1;
+	}
 
-    // render loop 渲染循环的一次迭代通常被称为一帧
-    while (!glfwWindowShouldClose(window))
-    {
-        // input
-        processInput(window);
+	// build and compile our shader program
+	// vertex shader
+	unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
+	glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
+	glCompileShader(vertexShader);
+	// check for shader compile errors
+	int success;
+	char infoLog[512];
+	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
+	if (!success)
+	{
+		glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
+		std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl;
+	}
+	// fragment shader
+	unsigned int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+	glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
+	glCompileShader(fragmentShader);
+	// check for shader compile errors
+	glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
+	if (!success)
+	{
+		glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
+		std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
+	}
+	// link shaders
+	unsigned int shaderProgram = glCreateProgram();
+	glAttachShader(shaderProgram, vertexShader);
+	glAttachShader(shaderProgram, fragmentShader);
+	glLinkProgram(shaderProgram);
+	// check for linking errors
+	glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
+	if (!success) {
+		glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
+		std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
+	}
+	glDeleteShader(vertexShader);
+	glDeleteShader(fragmentShader);
 
-        // render
-        /*
-            在帧开始时清空屏幕(否则会看到上一帧的结果)
-        */
-        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);  // 指定了清屏颜色
-        glClear(GL_COLOR_BUFFER_BIT);          // 清空屏幕的颜色缓冲区,整个颜色缓冲区都会填充 glClearColor 配置的颜色
+	// 作为graphics pipeline的输入(顶点集合)
+	float vertices[] = {
+		 -0.5f, -0.5f, 0.0f,    // 这里z轴坐标为0.0f, 表示深度不变
+		 0.5f, -0.5f, 0.0f,
+		 0.0f,  0.5f, 0.0f
+	};
 
-        /*
-            双缓冲层(单个缓冲区进行绘制时，生成的图像可能会出现闪烁问题,
-            因为输出图像并非瞬间绘制完成，而是逐像素绘制，通常是从左到右、从上到下)
-            所有渲染命令都绘制到后缓冲区。一旦所有渲染命令完成，我们就将后缓冲区的内容切换到前缓冲区
-        */
-        glfwSwapBuffers(window);
-        glfwPollEvents();
-    }
+	unsigned int VBO, VAO;
+	glGenVertexArrays(1, &VAO);
+	glGenBuffers(1, &VBO);   // 使用这些缓冲区对象的优势在于，可以一次性向显卡发送大量数据
+	/*
+		a.bind the Vertex Array Object first,
+		b.then bind and set vertex buffer(s),
+		c.and then configure vertex attributes(s).
+	*/
+	glBindVertexArray(VAO);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-    // glfw: terminate, clearing all previously allocated GLFW resources.
-    glfwTerminate();
-    return 0;
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(0);
+
+	// note that this is allowed, the call to glVertexAttribPointer registered VBO as the vertex attribute's bound vertex buffer object so afterwards we can safely unbind
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+	// You can unbind the VAO afterwards so other VAO calls won't accidentally modify this VAO, but this rarely happens. Modifying other
+	// VAOs requires a call to glBindVertexArray anyways so we generally don't unbind VAOs (nor VBOs) when it's not directly necessary.
+	glBindVertexArray(0);
+
+	// render loop 渲染循环的一次迭代通常被称为一帧
+	while (!glfwWindowShouldClose(window))
+	{
+		// input
+		processInput(window);
+
+		// render
+		/*
+			在帧开始时清空屏幕(否则会看到上一帧的结果)
+		*/
+		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);  // 指定了清屏颜色
+		glClear(GL_COLOR_BUFFER_BIT);          // 清空屏幕的颜色缓冲区,整个颜色缓冲区都会填充 glClearColor 配置的颜色
+
+		// draw our first triangle
+		glUseProgram(shaderProgram);
+		glBindVertexArray(VAO); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
+		glDrawArrays(GL_TRIANGLES, 0, 3);
+		// glBindVertexArray(0); // no need to unbind it every time 
+
+		/*
+			双缓冲层(单个缓冲区进行绘制时，生成的图像可能会出现闪烁问题,
+			因为输出图像并非瞬间绘制完成，而是逐像素绘制，通常是从左到右、从上到下)
+			所有渲染命令都绘制到后缓冲区。一旦所有渲染命令完成，我们就将后缓冲区的内容切换到前缓冲区
+		*/
+		glfwSwapBuffers(window);
+		glfwPollEvents();
+	}
+
+	// optional: de-allocate all resources once they've outlived their purpose:
+	glDeleteVertexArrays(1, &VAO);
+	glDeleteBuffers(1, &VBO);
+	glDeleteProgram(shaderProgram);
+
+	// glfw: terminate, clearing all previously allocated GLFW resources.
+	glfwTerminate();
+	return 0;
 }
 
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
 void processInput(GLFWwindow* window)
 {
-    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-        glfwSetWindowShouldClose(window, true);
+	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+		glfwSetWindowShouldClose(window, true);
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes 注册回调
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
-    /*
-    * make sure the viewport matches the new window dimensions; note that width and
-    * height will be significantly larger than specified on retina displays.
-      渲染窗口的大小(Viewport的大小),可以将视口尺寸Viewport设置为小于 GLFW 尺寸的值 
-    */
-    glViewport(0, 0, width, height);
+	/*
+	* make sure the viewport matches the new window dimensions; note that width and
+	* height will be significantly larger than specified on retina displays.
+	渲染窗口的大小(Viewport的大小),可以将视口尺寸Viewport设置为小于 GLFW 尺寸的值 
+	NDC 坐标将通过视口变换viewport transform, 通过 glViewport提供的数据(width, height)转换为屏幕空间坐标。
+	生成的屏幕空间坐标随后将转换为片段
+	*/
+	glViewport(0, 0, width, height);
 }
