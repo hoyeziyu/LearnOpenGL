@@ -1,0 +1,26 @@
+#version 330 core
+
+// 顶点着色器的每个输入变量也称为顶点属性（顶点属性数量受硬件限制，至少有16个）
+
+// 将数据从一个着色器发送到另一个着色器，需要在发送着色器中声明一个输出，
+// 并在接收着色器中声明一个类似的输入。当两端的类型和名称都相同时，OpenGL会将这些变量链接起来，
+// 然后就可以在着色器之间发送数据了（这是通过链接程序对象实现的）
+
+// Uniform 是另一种将数据从 CPU 上的应用程序传递到 GPU 上的着色器的方法。
+// Uniform 是全局的。全局意味着每个着色器程序对象中的 uniform 变量都是唯一的(链接一起了)，
+// 并且可以在着色器程序的任何阶段从任何着色器访问。
+// 其次，无论您将 uniform 值设置为什么，它都会一直保持该值，直到被重置或更新
+
+// 更新 uniform 变量则需要先调用着色器程序（通过调用 glUseProgram），uniform不设置值会被编译器删掉
+// 因为它会将 uniform 变量设置到当前活动的着色器程序上
+
+layout (location = 0) in vec3 aPos; // the position variable has attribute position 0
+layout (location = 1) in vec3 aColor;
+
+out vec3 ourColor;
+
+void main()
+{
+	gl_Position = vec4(aPos, 1.0); // see how we directly give a vec3 to vec4's constructor
+	ourColor = aColor; 
+}
